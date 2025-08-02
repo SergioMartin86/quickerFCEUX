@@ -1,9 +1,12 @@
 # Getting core configurations
-
-# Do not get base repo if this is a subproject
-if meson.is_subproject() == false
-subdir('base')
+if get_option('buildQuickNES') == true
+subdir('quickNES')
 endif
 
-subdir('new')
+subdir('quickerNES')
 
+# Tool Configuration
+
+ toolDependency = declare_dependency(
+  include_directories : include_directories(['.']),
+ )

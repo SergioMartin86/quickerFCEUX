@@ -5,9 +5,30 @@ option('buildPlayer',
   yield: true
 )
 
+option('buildQuickNES',
+  type : 'boolean',
+  value : true,
+  description : 'Build quickNES core',
+  yield: true
+)
+
+option('buildTests',
+  type : 'boolean',
+  value : true,
+  description : 'Build tests',
+  yield: true
+)
+
 option('onlyOpenSource',
   type : 'boolean',
   value : false,
   description : 'Test using only open source games (for cloud CI)',
+  yield: true
+)
+
+option('enableArkanoidInputs',
+  type : 'boolean',
+  value : false,
+  description : 'Build tests',
   yield: true
 )

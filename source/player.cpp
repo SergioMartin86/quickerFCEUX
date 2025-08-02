@@ -1,85 +1,95 @@
-#include <jaffarCommon/file.hpp>
-#include <jaffarCommon/string.hpp>
-#include <jaffarCommon/exceptions.hpp>
-#include <jaffarCommon/logger.hpp>
-#include <jaffarCommon/json.hpp>
 #include "argparse/argparse.hpp"
-#include "mgbaInstance.hpp"
+#include "jaffarCommon/deserializers/contiguous.hpp"
+#include "jaffarCommon/file.hpp"
+#include "jaffarCommon/logger.hpp"
+#include "jaffarCommon/serializers/contiguous.hpp"
+#include "jaffarCommon/string.hpp"
+#include "nesInstance.hpp"
 #include "playbackInstance.hpp"
+#include <cstdlib>
+
+SDL_Window *launchOutputWindow()
+{
+  // Opening rendering window
+  SDL_SetMainReady();
+
+  // We can only call SDL_InitSubSystem once
+  if (!SDL_WasInit(SDL_INIT_VIDEO))
+    if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) JAFFAR_THROW_LOGIC("Failed to initialize video: %s", SDL_GetError());
+
+  auto window = SDL_CreateWindow("JaffarPlus", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 100, 100, SDL_WINDOW_RESIZABLE);
+  if (window == nullptr) JAFFAR_THROW_LOGIC("Coult not open SDL window");
+
+  return window;
+}
+
+void closeOutputWindow(SDL_Window *window) { SDL_DestroyWindow(window); }
 
 int main(int argc, char *argv[])
 {
   // Parsing command line arguments
   argparse::ArgumentParser program("player", "1.0");
 
-  program.add_argument("scriptFile")
-    .help("Path to the test script file to run.")
+  program.add_argument("romFile")
+    .help("Path to the rom file to run.")
     .required();
 
   program.add_argument("sequenceFile")
     .help("Path to the input sequence file (.sol) to reproduce.")
     .required();
 
+  program.add_argument("stateFile")
+    .help("(Optional) Path to the initial state file to load.")
+    .default_value(std::string(""));
+
   program.add_argument("--reproduce")
     .help("Plays the entire sequence without interruptions and exit at the end.")
     .default_value(false)
     .implicit_value(true);
-
-  program.add_argument("--cycleType")
-    .help("Specifies the emulation actions to be performed per each input. Possible values: 'Simple': performs only advance state, 'Rerecord': performs load/advance/save, and 'Full': performs load/advance/save/advance.")
-    .default_value(std::string("Simple"));
 
   program.add_argument("--disableRender")
     .help("Do not render game window.")
     .default_value(false)
     .implicit_value(true);
 
+  program.add_argument("--controller1")
+    .help("Specifies the controller 1 type.")
+    .default_value(std::string("Joypad"));
+
+  program.add_argument("--controller2")
+    .help("Specifies the controller 2 type.")
+    .default_value(std::string("None"));
 
   // Try to parse arguments
-  try { program.parse_args(argc, argv); } catch (const std::runtime_error &err) { JAFFAR_THROW_LOGIC("%s\n%s", err.what(), program.help().str().c_str()); }
+  try
+  {
+    program.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error &err)
+  {
+    JAFFAR_THROW_LOGIC("%s\n%s", err.what(), program.help().str().c_str());
+  }
 
-  // Getting cycle type
-  const auto cycleType = program.get<std::string>("--cycleType");
-  bool cycleTypeRecognized = false;
-  if (cycleType == "Simple") cycleTypeRecognized = true;
-  if (cycleType == "Rerecord") cycleTypeRecognized = true;
-  if (cycleTypeRecognized == false) JAFFAR_THROW_LOGIC("Unrecognized cycle type: %s\n", cycleType.c_str());
-  
-  // Getting test script file path
-  const auto scriptFilePath = program.get<std::string>("scriptFile");
-
-  // Loading script file
-  std::string configJsRaw;
-  if (jaffarCommon::file::loadStringFromFile(configJsRaw, scriptFilePath) == false) JAFFAR_THROW_LOGIC("Could not find/read script file: %s\n", scriptFilePath.c_str());
-
-  // Parsing script
-  const auto configJs = nlohmann::json::parse(configJsRaw);
-
-  // Getting rom file path
-  const auto romFilePath = jaffarCommon::json::getString(configJs, "Rom File Path");
-
-  // Getting initial state file path
-  const auto initialStateFilePath = jaffarCommon::json::getString(configJs, "Initial State File");
+  // Getting ROM file path
+  std::string romFilePath = program.get<std::string>("romFile");
 
   // Getting sequence file path
   std::string sequenceFilePath = program.get<std::string>("sequenceFile");
 
-    // Getting expected Rom SHA1 hash
-  const auto expectedRomSHA1 = jaffarCommon::json::getString(configJs, "Expected Rom SHA1");
-
-  // Parsing disabled blocks in lite state serialization
-  const auto stateDisabledBlocks = jaffarCommon::json::getArray<std::string>(configJs, "Disable State Blocks");
-  std::string stateDisabledBlocksOutput;
-  for (const auto& entry : stateDisabledBlocks) stateDisabledBlocksOutput += entry + std::string(" ");
-  
-  // Getting Controller type
-  const auto controllerType = jaffarCommon::json::getString(configJs, "Controller Type");
+  // If initial state file is specified, load it
+  std::string stateFilePath = program.get<std::string>("stateFile");
 
   // Getting reproduce flag
   bool isReproduce = program.get<bool>("--reproduce");
 
   // Getting reproduce flag
   bool disableRender = program.get<bool>("--disableRender");
+
+  // Getting controller 1 Type
+  std::string controller1Type = program.get<std::string>("--controller1");
+
+  // Getting controller 2 Type
+  std::string controller2Type = program.get<std::string>("--controller2");
 
   // Loading sequence file
   std::string inputSequence;
@@ -96,47 +106,47 @@ int main(int argc, char *argv[])
   jaffarCommon::logger::log("[] Rom File Path:      '%s'\n", romFilePath.c_str());
   jaffarCommon::logger::log("[] Sequence File Path: '%s'\n", sequenceFilePath.c_str());
   jaffarCommon::logger::log("[] Sequence Length:    %lu\n", sequence.size());
-  jaffarCommon::logger::log("[] State File Path:    '%s'\n", initialStateFilePath.empty() ? "<Boot Start>" : initialStateFilePath.c_str());
+  jaffarCommon::logger::log("[] State File Path:    '%s'\n", stateFilePath.empty() ? "<Boot Start>" : stateFilePath.c_str());
   jaffarCommon::logger::log("[] Generating Sequence...\n");
 
   jaffarCommon::logger::refreshTerminal();
 
-  // Loading Rom File
+  // Creating emulator instance
+  nlohmann::json emulatorConfig;
+  emulatorConfig["Controller 1 Type"] = controller1Type;
+  emulatorConfig["Controller 2 Type"] = controller2Type;
+  NESInstance e(emulatorConfig);
+
+  // Loading ROM File
   std::string romFileData;
   if (jaffarCommon::file::loadStringFromFile(romFileData, romFilePath) == false) JAFFAR_THROW_LOGIC("Could not rom file: %s\n", romFilePath.c_str());
-
-  // Calculating Rom SHA1
-  auto romSHA1 = jaffarCommon::hash::getSHA1String(romFileData);
-
-  // Checking with the expected SHA1 hash
-  if (romSHA1 != expectedRomSHA1) JAFFAR_THROW_LOGIC("Wrong Rom SHA1. Found: '%s', Expected: '%s'\n", romSHA1.c_str(), expectedRomSHA1.c_str());
-
-  // Creating emulator instance  
-  auto e = mgba::EmuInstance(configJs);
-
-  // Initializing emulator instance
-  e.initialize();
-
-  // Initializing video output
-  if (disableRender == false) e.initializeVideoOutput();
-
-  // If rendering enabled, then initailize it now
-  if (disableRender == false) e.enableRendering();
+  e.loadROM((uint8_t *)romFileData.data(), romFileData.size());
 
   // If an initial state is provided, load it now
-  if (initialStateFilePath != "")
+  if (stateFilePath != "")
   {
     std::string stateFileData;
-    if (jaffarCommon::file::loadStringFromFile(stateFileData, initialStateFilePath) == false) JAFFAR_THROW_LOGIC("Could not initial state file: %s\n", initialStateFilePath.c_str());
-    jaffarCommon::deserializer::Contiguous d(stateFileData.data());
-    e.deserializeState(d);
+    if (jaffarCommon::file::loadStringFromFile(stateFileData, stateFilePath) == false) JAFFAR_THROW_LOGIC("Could not initial state file: %s\n", stateFilePath.c_str());
+    jaffarCommon::deserializer::Contiguous deserializer(stateFileData.data());
+    e.deserializeState(deserializer);
   }
 
   // Creating playback instance
-  auto p = PlaybackInstance(&e, sequence, cycleType);
+  auto p = PlaybackInstance(&e);
+
+  // If render is enabled then, create window now
+  SDL_Window *window = nullptr;
+  if (disableRender == false)
+  {
+    window = launchOutputWindow();
+    p.enableRendering(window);
+  }
+
+  // Initializing playback instance
+  p.initialize(sequence);
 
   // Getting state size
-  auto stateSize = e.getStateSize();
+  auto stateSize = e.getFullStateSize();
 
   // Flag to continue running playback
   bool continueRunning = true;
@@ -172,6 +182,7 @@ int main(int argc, char *argv[])
       jaffarCommon::logger::log("[] Current Step #: %lu / %lu\n", currentStep + 1, sequenceLength);
       jaffarCommon::logger::log("[] Input:          %s\n", inputString.c_str());
       jaffarCommon::logger::log("[] State Hash:     0x%lX%lX\n", hash.first, hash.second);
+      jaffarCommon::logger::log("[] Paddle X:       %u\n", e.getLowMem()[0x11A]);
 
       // Only print commands if not in reproduce mode
       if (isReproduce == false) jaffarCommon::logger::log("[] Commands: n: -1 m: +1 | h: -10 | j: +10 | y: -100 | u: +100 | k: -1000 | i: +1000 | s: quicksave | p: play | q: quit\n");
@@ -208,7 +219,7 @@ int main(int argc, char *argv[])
       std::string saveData;
       saveData.resize(stateSize);
       memcpy(saveData.data(), stateData, stateSize);
-      if (jaffarCommon::file::saveStringToFile(saveData, saveFileName.c_str()) == false) JAFFAR_THROW_RUNTIME("[ERROR] Could not save state file: %s\n", saveFileName.c_str());
+      if (jaffarCommon::file::saveStringToFile(saveData, saveFileName.c_str()) == false) JAFFAR_THROW_LOGIC("[ERROR] Could not save state file: %s\n", saveFileName.c_str());
       jaffarCommon::logger::log("[] Saved state to %s\n", saveFileName.c_str());
 
       // Do no show frame info again after this action
@@ -222,11 +233,8 @@ int main(int argc, char *argv[])
     if (command == 'q') continueRunning = false;
   }
 
-  // Finalizing video output
-  if (disableRender == false) e.finalizeVideoOutput();
-
-  // If rendering enabled, then finalize it now
-  if (disableRender == false) e.disableRendering();
+  // If render is enabled then, close window now
+  if (disableRender == false) closeOutputWindow(window);
 
   // Ending ncurses window
   jaffarCommon::logger::finalizeTerminal();

@@ -1,146 +1,47 @@
-# newMGBA Core sources
+# quickerNES Core sources
 
-newMGBASrc =  [
-	'core/src/core/bitmap-cache.c',
-	'core/src/core/cache-set.c',
-	'core/src/core/cheats.c',
-	'core/src/core/config.c',
-	'core/src/core/core.c',
-	'core/src/core/directories.c',
-	'core/src/core/input.c',
-	'core/src/core/interface.c',
-	'core/src/core/library.c',
-	'core/src/core/lockstep.c',
-	'core/src/core/log.c',
-	'core/src/core/map-cache.c',
-	'core/src/core/mem-search.c',
-	'core/src/core/rewind.c',
-	'core/src/core/serialize.c',
-	'core/src/core/sync.c',
-	'core/src/core/thread.c',
-	'core/src/core/tile-cache.c',
-	'core/src/core/timing.c',
-	'core/src/arm/arm.c',
-	'core/src/arm/decoder-arm.c',
-	'core/src/arm/decoder-thumb.c',
-	'core/src/arm/decoder.c',
-	'core/src/arm/isa-arm.c',
-	'core/src/arm/isa-thumb.c',
-	'core/src/arm/debugger/cli-debugger.c',
-	'core/src/arm/debugger/memory-debugger.c',
-	'core/src/arm/debugger/debugger.c',
-	'core/src/gb/audio.c',
-	'core/src/gba/audio.c',
-	'core/src/gba/bios.c',
-	'core/src/gba/cheats.c',
-	'core/src/gba/core.c',
-	'core/src/gba/dma.c',
-	'core/src/gba/gba.c',
-	'core/src/gba/hle-bios.c',
-	'core/src/gba/input.c',
-	'core/src/gba/io.c',
-	'core/src/gba/memory.c',
-	'core/src/gba/overrides.c',
-	'core/src/gba/savedata.c',
-	'core/src/gba/serialize.c',
-	'core/src/gba/sharkport.c',
-	'core/src/gba/sio.c',
-	'core/src/gba/timer.c',
-	'core/src/gba/video.c',
-	'core/src/gba/cart/ereader.c',
-	'core/src/gba/cart/gpio.c',
-	'core/src/gba/cart/matrix.c',
-	'core/src/gba/cart/vfame.c',
-	'core/src/gba/cheats/codebreaker.c',
-	'core/src/gba/cheats/gameshark.c',
-	'core/src/gba/cheats/parv3.c',
-	'core/src/gba/debugger/cli.c',
-	'core/src/gba/renderers/cache-set.c',
-	'core/src/gba/renderers/common.c',
-	'core/src/gba/renderers/software-bg.c',
-	'core/src/gba/renderers/software-mode0.c',
-	'core/src/gba/renderers/software-obj.c',
-	'core/src/gba/renderers/video-software.c',
-	'core/src/gba/sio/gbp.c',
-	'core/src/gba/sio/joybus.c',
-	'core/src/gba/sio/lockstep.c',
-	'core/src/debugger/debugger.c',
-	'core/src/debugger/stack-trace.c',
-	'core/src/debugger/cli-debugger.c',
-	'core/src/debugger/symbols.c',
-	'core/src/debugger/parser.c',
-	'core/src/third-party/blip_buf/blip_buf.c',
-	'core/src/third-party/inih/ini.c',
-	'core/src/util/circle-buffer.c',
-	'core/src/util/configuration.c',
-	'core/src/util/crc32.c',
-	'core/src/util/elf-read.c',
-	'core/src/util/formatting.c',
-	'core/src/util/gbk-table.c',
-	'core/src/util/gui.c',
-	'core/src/util/hash.c',
-	'core/src/util/image/png-io.c',
-	'core/src/util/patch-fast.c',
-	'core/src/util/patch-ips.c',
-	'core/src/util/patch-ups.c',
-	'core/src/util/patch.c',
-	'core/src/util/ring-fifo.c',
-	'core/src/util/string.c',
-	'core/src/util/table.c',
-	'core/src/util/text-codec.c',
-	'core/src/util/vector.c',
-	'core/src/util/vfs.c',
-	'core/src/util/vfs/vfs-mem.c',
-	'../bizinterface.c',
-	'core/src/platform/bizhawk/localtime_r.c',
-  'core/src/platform/posix/memory.c',
+quickerNESAPUSrc = [
+ 'core/apu/apu.cpp', 
+ 'core/apu/oscs.cpp', 
+ 'core/apu/buffer.cpp', 
+ 'core/apu/blipBuffer.cpp', 
+ 'core/apu/NESEffectsBuffer.cpp', 
+ 'core/apu/effectsBuffer.cpp', 
+ 'core/apu/multiBuffer.cpp',
+ 'core/apu/namco/apu_namco.cpp', 
+ 'core/apu/vrc6/apu_vrc6.cpp', 
+ 'core/apu/vrc7/emu2413.cpp', 
+ 'core/apu/vrc7/emu2413_state.cpp', 
+ 'core/apu/vrc7/apu_vrc7.cpp',
+ 'core/apu/fme7/apu_fme7.cpp', 
 ]
 
-newMGBAIncludeDirs = [
-  '.',
-  '..',
-  'core',
-  'core/include',
-  'core/src',
-	'core/src/core',
-	'core/src/arm',
-	'core/src/gb',
-	'core/src/gba',
-	'core/src/gba/cart',
-	'core/src/gba/cheats',
-	'core/src/gba/debugger',
-	'core/src/gba/renderers',
-	'core/src/gba/sio',
-	'core/src/debugger',
-	'core/src/third-party/blip_buf',
-	'core/src/third-party/inih',
-  'core/src/third-party',
-	'core/src/util',
-	'core/src/platform/bizhawk',
+quickerNESPPUSrc = [
+ 'core/ppu/ppu.cpp', 
+ 'core/ppu/ppuImpl.cpp', 
+ 'core/ppu/ppuRendering.cpp',
 ]
 
-newMGBACompileArgs = [
-	'-DMINIMAL_CORE=2',
-  '-DDISABLE_THREADING',
-  '-DM_CORE_GBA',
-  '-DCOLOR_16_BIT',
-  '-DMGBA_STANDALONE',
-  '-DENABLE_DEBUGGERS',
-  '-DHAVE_LOCALE',
-  '-DHAVE_LOCALTIME_R',
-  '-DHAVE_NEWLOCALE'
+quickerNESSrc = quickerNESAPUSrc + quickerNESPPUSrc + [
+ 'core/mappers/mapper.cpp', 
+ 'core/emu.cpp', 
+ 'core/cpu.cpp'
 ]
 
+quickerNESCompileArgs = [ ]
 
+# Checking for arkanoid input support
+if get_option('enableArkanoidInputs') == true
+ quickerNESCompileArgs += '-D_QUICKERNES_SUPPORT_ARKANOID_INPUTS'
+endif
 
-# newMGBA Core Configuration
+# quickerNES Core Configuration
 
- newMGBADependency = declare_dependency(
-  compile_args        : [  newMGBACompileArgs ],
-  include_directories : include_directories(newMGBAIncludeDirs),
-  sources             : [ newMGBASrc ],
-  dependencies        : [  
-                          dependency('sdl2',  required : true),
-                          dependency('zlib',  required : true)
-                        ]
+ quickerNESDependency = declare_dependency(
+  compile_args        : quickerNESCompileArgs,
+  include_directories : include_directories(['.', '..']),
+  sources             : [ quickerNESSrc ],
+  dependencies        : [ 
+						  																		dependency('sdl2'),
+		                      ]
  )

@@ -1,0 +1,9 @@
+[submodule "extern/jaffarCommon"]
+	path = extern/jaffarCommon
+	url = https://github.com/SergioMartin86/jaffarCommon.git
+[submodule "source/base/fceux"]
+	path = source/base/fceux
+	url = https://github.com/SergioMartin86/fceux.git
+[submodule "source/new/fceux"]
+	path = source/new/fceux
+	url = https://github.com/SergioMartin86/fceux.git
